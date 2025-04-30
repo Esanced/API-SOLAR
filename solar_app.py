@@ -174,25 +174,32 @@ with st.sidebar:
                 st.session_state["nuevo_periodo"] = periodo_pdf if periodo_pdf else ""
                 
                 consumo_total = get_float_value(datos_recibo, "consumo_total_periodo")
+                #precio_basico = get_float_value(datos_recibo, "basico_precio")
+                #precio_intermedio = get_float_value(datos_recibo, "intermedio_precio")
+                #precio_excedente = get_float_value(datos_recibo, "excedente_precio")
+                
+                st.session_state["precio_basico"] = get_float_value(datos_recibo, "basico_precio")
+                st.session_state["precio_intermedio"] = get_float_value(datos_recibo, "intermedio_precio")
+                st.session_state["precio_excedente"] = get_float_value(datos_recibo, "excedente_precio")
 
                 # Lógica para Básico CFE
                 if consumo_total > 150:
-                    st.session_state["nuevo_basico_cfe"] = 150
+                    st.session_state["nuevo_basico_cfe"] = 150 
                 else:
-                    st.session_state["nuevo_basico_cfe"] = consumo_total
+                    st.session_state["nuevo_basico_cfe"] = consumo_total 
 
                 # Lógica para Intermedio 1 CFE
                 if consumo_total > 150:
                     if consumo_total > 350:
-                        st.session_state["nuevo_intermedio1_cfe"] = 200
+                        st.session_state["nuevo_intermedio1_cfe"] = 200 
                     else:
-                        st.session_state["nuevo_intermedio1_cfe"] = consumo_total - st.session_state["nuevo_basico_cfe"]
+                        st.session_state["nuevo_intermedio1_cfe"] = (consumo_total - st.session_state["nuevo_basico_cfe"])
                 else:
                     st.session_state["nuevo_intermedio1_cfe"] = 0
 
                 # Lógica para Excedente CFE
                 if consumo_total > 350:
-                    st.session_state["nuevo_excedente_cfe"] = consumo_total - (st.session_state["nuevo_basico_cfe"] + st.session_state["nuevo_intermedio1_cfe"])
+                    st.session_state["nuevo_excedente_cfe"] = (consumo_total - (st.session_state["nuevo_basico_cfe"] + st.session_state["nuevo_intermedio1_cfe"]))
                 else:
                     st.session_state["nuevo_excedente_cfe"] = 0     
                                
@@ -274,7 +281,29 @@ with st.sidebar:
                 key="excedente_cfe_input"
             )
             
-
+            # Campos de precios por nivel
+            precio_basico = st.number_input(
+                "Precio Básico", 
+                min_value=0.0, 
+                format="%.2f", 
+                value=float(st.session_state.get("precio_basico", 0.0)),
+                key="basico_precio_input"
+            )
+            precio_intermedio = st.number_input(
+                "Precio Intermedio", 
+                min_value=0.0, 
+                format="%.2f", 
+                value=float(st.session_state.get("precio_intermedio", 0.0)),
+                key="precio_intermedio_input"
+            )
+            precio_excedente = st.number_input(
+                "Precio Excedente", 
+                min_value=0.0, 
+                format="%.2f", 
+                value=float(st.session_state.get("precio_excedente", 0.0)),
+                key="precio_excedente_input"
+            )
+            
             submit_button = st.form_submit_button(label='Agregar Datos')
 
     if submit_button:
@@ -288,6 +317,9 @@ with st.sidebar:
             nuevo_intermedio1_cfe = float(nuevo_intermedio1_cfe)
             nuevo_intermedio2_cfe = float(nuevo_intermedio2_cfe)
             nuevo_excedente_cfe = float(nuevo_excedente_cfe)
+            precio_basico = float(precio_basico)
+            precio_intermedio = float(precio_intermedio)
+            precio_excedente = float(precio_excedente)
             
             # Calcular campos faltantes para el nuevo registro
             if "No. Periodo" in df.columns:
