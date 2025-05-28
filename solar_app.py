@@ -22,13 +22,9 @@ st.set_page_config(
 )
 
 # Lee el valor del secreto o usa uno por defecto
+# Cambiamos esto a una variable de sesión
 if 'INVERSION_INICIAL' not in st.session_state:
-    try:
-        # Para GitHub Actions (secreto)
-        st.session_state.INVERSION_INICIAL = float(os.environ["INVERSION_INICIAL"])
-    except KeyError:
-        # Para desarrollo local (secrets.toml o valor por defecto)
-        st.session_state.INVERSION_INICIAL = st.secrets.get("INVERSION_INICIAL", 100000)
+    st.session_state['INVERSION_INICIAL'] = 100000
 
 LOGO_PATH = "logo_solar.png"
 
@@ -215,13 +211,17 @@ with st.sidebar:
     st.markdown("## Configuración de Meta")
     with st.expander("Actualizar Meta de Ahorro"):
         
-        nueva_meta = st.number_input("Nueva meta ($)", value=st.session_state.INVERSION_INICIAL)
-        if st.button("💾 Guardar Meta"):
-            st.session_state.INVERSION_INICIAL = nueva_meta
+        nueva_meta = st.number_input(
+            "Meta de inversión a recuperar ($)", 
+            min_value=0.0, 
+            value=float(st.session_state['INVERSION_INICIAL']),
+            step=1000.0,
+            format="%.2f"
+        )
+        
+        if st.button("Actualizar Meta"):
+            st.session_state['INVERSION_INICIAL'] = nueva_meta
             st.success(f"Meta actualizada a ${nueva_meta:,.2f}")
-            # Sobrescribe secrets.toml (requiere reinicio para aplicar cambios permanentes)
-            with open(".streamlit/secrets.toml", "w") as f:
-                f.write(f"INVERSION_INICIAL = {nueva_meta}")                
     
     # ============================
     # Sidebar - Filtros
