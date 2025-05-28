@@ -1,4 +1,4 @@
-import streamlit as st
+rt streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
@@ -11,7 +11,11 @@ from datetime import datetime
 # ============================
 EXCEL_PATH = "Inversión sistema fotovoltaico.xlsx"
 EXCEL_SHEET = "Total"
-INVERSION_INICIAL = 109000
+
+# Cambiamos esto a una variable de sesión
+if 'INVERSION_INICIAL' not in st.session_state:
+    st.session_state['INVERSION_INICIAL'] = 109000
+
 LOGO_PATH = "logo_solar.png"
 
 # ============================
@@ -131,28 +135,10 @@ st.set_page_config(
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, use_column_width=True)
-    
-    st.markdown("## Filtros")
-    
-    with st.expander("Filtros"):
-        opciones_periodo = ["Seleccionar todo"] + list(df[periodo_col].unique()) if not df.empty else ["Seleccionar todo"]
-        seleccion_periodo = st.multiselect('Selecciona periodos', opciones_periodo, default=["Seleccionar todo"])
-        
-        df_filtrado = df.copy()
-        if seleccion_periodo and "Seleccionar todo" not in seleccion_periodo:
-            df_filtrado = df_filtrado[df_filtrado[periodo_col].isin(seleccion_periodo)]
-        
-        if origen_col:
-            opciones_origen = ["Seleccionar todo"] + list(df[origen_col].unique()) if not df.empty else ["Seleccionar todo"]
-            seleccion_origen = st.multiselect('Selecciona origen', opciones_origen, default=["Seleccionar todo"])
-            if seleccion_origen and "Seleccionar todo" not in seleccion_origen:
-                df_filtrado = df_filtrado[df_filtrado[origen_col].isin(seleccion_origen)]
-        
-        opciones_nivel = ["Seleccionar todo"] + ['Básico', 'Intermedio 1', 'Intermedio 2', 'Excedente']
-        seleccion_nivel = st.multiselect('Selecciona nivel de cobro', opciones_nivel, default=["Seleccionar todo"])
-        if seleccion_nivel and "Seleccionar todo" not in seleccion_nivel:
-            columnas_nivel = [col for col in df.columns if any(n in col for n in seleccion_nivel)]
-            df_filtrado = df_filtrado[[periodo_col] + ([origen_col] if origen_col else []) + columnas_nivel]
+           
+    # ============================
+    # Sidebar - Carga de recibo de luz
+    # ============================
             
     st.markdown("## Cargar Recibo de Luz (PDF)")
     
@@ -164,9 +150,8 @@ with st.sidebar:
         if datos_recibo:
             st.success("Recibo procesado correctamente!")
             
-            with st.expander("Ver datos extraídos", expanded=True):
+            with st.expander("Ver datos extraídos", expanded=False):
                 st.json(datos_recibo)
-            
             
             # Pre-llenar el formulario con los datos del PDF
             try:
@@ -198,15 +183,70 @@ with st.sidebar:
                     st.session_state["nuevo_intermedio1_cfe"] = 0
 
                 # Lógica para Excedente CFE
-                if consumo_total > 350:
-                    st.session_state["nuevo_excedente_cfe"] = (consumo_total - (st.session_state["nuevo_basico_cfe"] + st.session_state["nuevo_intermedio1_cfe"]))
-                else:
-                    st.session_state["nuevo_excedente_cfe"] = 0     
+                #if consumo_total > 350:
+                 #   st.session_state["nuevo_excedente_cfe"] = (consumo_total - (st.session_state["nuevo_basico_cfe"] + st.session_state["nuevo_intermedio1_cfe"]))
+               # else:
+                #    st.session_state["nuevo_excedente_cfe"] = 0     
                                
-                st.info("Los campos del formulario se han pre-llenado con los datos del recibo. Verifica y ajusta si es necesario.")
+                #st.info("Los campos del formulario se han pre-llenado con los datos del recibo. Verifica y ajusta si es necesario.")
                 
+                # Lógica para Excedente CFE
+                st.session_state["nuevo_excedente_cfe"] = get_float_value(datos_recibo, "excedente_kwh")   
+                
+                # Lógica para devolucion a la red
+                st.session_state["MWh_devueltos"] = consumo_total - st.session_state["nuevo_basico_cfe"] - st.session_state["nuevo_intermedio1_cfe"] - st.session_state["nuevo_excedente_cfe"]
+
+
+                st.info("Los campos del formulario se han pre-llenado con los datos del recibo. Verifica y ajusta si es necesario.")
+             
+                      
             except Exception as e:
                 st.error(f"Error al cargar datos en el formulario: {str(e)}")
+                                
+    # ============================
+    # Sección para actualizar la meta de inversión
+    # ============================
+    
+    st.markdown("## Configuración de Meta")
+    with st.expander("Actualizar Meta de Ahorro"):
+        nueva_meta = st.number_input(
+            "Meta de inversión a recuperar ($)", 
+            min_value=0.0, 
+            value=float(st.session_state['INVERSION_INICIAL']),
+            step=1000.0,
+            format="%.2f"
+        )
+        
+        if st.button("Actualizar Meta"):
+            st.session_state['INVERSION_INICIAL'] = nueva_meta
+            st.success(f"Meta actualizada a ${nueva_meta:,.2f}")
+            
+        st.markdown("## Filtros")
+    
+    # ============================
+    # Sidebar - Filtros
+    # ============================
+    
+    st.markdown("## Filtros")
+    with st.expander("Filtros"):
+        opciones_periodo = ["Seleccionar todo"] + list(df[periodo_col].unique()) if not df.empty else ["Seleccionar todo"]
+        seleccion_periodo = st.multiselect('Selecciona periodos', opciones_periodo, default=["Seleccionar todo"])
+        
+        df_filtrado = df.copy()
+        if seleccion_periodo and "Seleccionar todo" not in seleccion_periodo:
+            df_filtrado = df_filtrado[df_filtrado[periodo_col].isin(seleccion_periodo)]
+        
+        if origen_col:
+            opciones_origen = ["Seleccionar todo"] + list(df[origen_col].unique()) if not df.empty else ["Seleccionar todo"]
+            seleccion_origen = st.multiselect('Selecciona origen', opciones_origen, default=["Seleccionar todo"])
+            if seleccion_origen and "Seleccionar todo" not in seleccion_origen:
+                df_filtrado = df_filtrado[df_filtrado[origen_col].isin(seleccion_origen)]
+        
+        opciones_nivel = ["Seleccionar todo"] + ['Básico', 'Intermedio 1', 'Intermedio 2', 'Excedente']
+        seleccion_nivel = st.multiselect('Selecciona nivel de cobro', opciones_nivel, default=["Seleccionar todo"])
+        if seleccion_nivel and "Seleccionar todo" not in seleccion_nivel:
+            columnas_nivel = [col for col in df.columns if any(n in col for n in seleccion_nivel)]
+            df_filtrado = df_filtrado[[periodo_col] + ([origen_col] if origen_col else []) + columnas_nivel]
             
     # ============================
     # Menú para ingresar datos
@@ -304,8 +344,17 @@ with st.sidebar:
                 key="precio_excedente_input"
             )
             
-            submit_button = st.form_submit_button(label='Agregar Datos')
+            # Campos de devolucion a la red
+            MWh_devueltos = st.number_input(
+                "Mwh Devueltos", 
+                min_value=0.0, 
+                format="%.2f", 
+                value=float(st.session_state.get("MWh_devueltos", 0.0)),
+                key="Mwh_devueltos_input"
+            )
 
+            submit_button = st.form_submit_button(label='Agregar Datos')
+        
     if submit_button:
         try:
             # Convertir todos los valores a float explícitamente
@@ -320,6 +369,7 @@ with st.sidebar:
             precio_basico = float(precio_basico)
             precio_intermedio = float(precio_intermedio)
             precio_excedente = float(precio_excedente)
+            MWh_devueltos = float(MWh_devueltos)
             
             # Calcular campos faltantes para el nuevo registro
             if "No. Periodo" in df.columns:
@@ -327,23 +377,38 @@ with st.sidebar:
             else:
                 nuevo_num_periodo = 1
             
+            # Datos de energia de paneles solares
             subtotal_solar = (
-                nuevo_basico_solar + nuevo_intermedio1_solar + 
-                nuevo_intermedio2_solar + nuevo_excedente_solar
+                (nuevo_basico_solar) + (nuevo_intermedio1_solar) + 
+                (nuevo_intermedio2_solar) + (nuevo_excedente_solar)
             )
             
             iva_solar = subtotal_solar * 0.16
             total_recibo_solar = subtotal_solar + iva_solar
             
+            
+            # Datos de energia de recibo de CFE
             subtotal_cfe = (
-                nuevo_basico_cfe + nuevo_intermedio1_cfe + 
-                nuevo_intermedio2_cfe + nuevo_excedente_cfe
+                (nuevo_basico_cfe*precio_basico) + (nuevo_intermedio1_cfe*precio_intermedio) + 
+                (nuevo_intermedio2_cfe) + (nuevo_excedente_cfe*precio_excedente)
             )
             
             iva_cfe = subtotal_cfe * 0.16
             total_cfe = subtotal_cfe + iva_cfe
-            ahorro_total = total_cfe - total_recibo_solar
             
+            if MWh_devueltos <= 150:
+                ahorro_total = MWh_devueltos * precio_basico
+            elif MWh_devueltos <= 350:
+                ahorro_basico = 150 * precio_basico
+                ahorro_intermedio = (MWh_devueltos - 150) * precio_intermedio
+                ahorro_total = ahorro_basico + ahorro_intermedio
+            else:  # MWh_devueltos > 350
+                ahorro_basico = 150 * precio_basico
+                ahorro_intermedio = 200 * precio_intermedio
+                ahorro_excedente = (MWh_devueltos - 350) * precio_excedente
+                # Se corrigió el cálculo final para sumar la variable correcta.
+                ahorro_total = ahorro_basico + ahorro_intermedio + ahorro_excedente
+                                
             nuevo_registro = {
                 periodo_col: nuevo_periodo,
                 "No. Periodo": nuevo_num_periodo,
@@ -351,10 +416,11 @@ with st.sidebar:
                 "Intermedio 1 Solar": nuevo_intermedio1_solar,
                 "Intermedio 2 Solar": nuevo_intermedio2_solar,
                 "Excedente Solar": nuevo_excedente_solar,
-                "Básico CFE": nuevo_basico_cfe,
-                "Intermedio 1 CFE": nuevo_intermedio1_cfe,
+                "Básico CFE": nuevo_basico_cfe*precio_basico,
+                "Intermedio 1 CFE": nuevo_intermedio1_cfe*precio_intermedio,
                 "Intermedio 2 CFE": nuevo_intermedio2_cfe,
-                "Excedente CFE": nuevo_excedente_cfe,
+                "Excedente CFE": nuevo_excedente_cfe*precio_excedente,
+                "Mwh Devueltos": MWh_devueltos,
                 "Subtotal Solar": subtotal_solar,
                 "IVA Solar": iva_solar,
                 "Total de recibo Solar": total_recibo_solar,
@@ -373,7 +439,7 @@ with st.sidebar:
             
         except Exception as e:
             st.error(f"Error al procesar los datos: {str(e)}")
-    
+                        
     # Botón para borrar último registro
     if st.button('🗑️ Borrar último registro', key='borrar_registro'):
         if len(df) > 0:
@@ -399,10 +465,11 @@ with st.sidebar:
 st.title("Monitoreo del Ahorro y Recuperación de Inversión")
 
 # Cálculo de métricas principales
+# Cálculo de métricas principales
 if not df_filtrado.empty:
     ahorro_acumulado = df_filtrado["Ahorro Total"].sum()
-    pendiente_recuperar = max(0, INVERSION_INICIAL - ahorro_acumulado)
-    progreso = (ahorro_acumulado / INVERSION_INICIAL) * 100 if INVERSION_INICIAL > 0 else 0
+    pendiente_recuperar = max(0, st.session_state['INVERSION_INICIAL'] - ahorro_acumulado)
+    progreso = (ahorro_acumulado / st.session_state['INVERSION_INICIAL']) * 100 if st.session_state['INVERSION_INICIAL'] > 0 else 0
     
     if len(df_filtrado) > 0 and ahorro_acumulado > 0:
         meses_faltantes = pendiente_recuperar / (ahorro_acumulado / len(df_filtrado))
@@ -412,11 +479,11 @@ if not df_filtrado.empty:
     ahorro_promedio_mensual = ahorro_acumulado / len(df_filtrado) if len(df_filtrado) > 0 else 0
 else:
     ahorro_acumulado = 0
-    pendiente_recuperar = INVERSION_INICIAL
+    pendiente_recuperar = st.session_state['INVERSION_INICIAL']
     progreso = 0
     meses_faltantes = 0
     ahorro_promedio_mensual = 0
-
+    
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Ahorro Acumulado", f"${ahorro_acumulado:,.2f}")
 col2.metric("Pendiente para Recuperar", f"${pendiente_recuperar:,.2f}")
