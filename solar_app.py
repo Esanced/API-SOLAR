@@ -12,10 +12,14 @@ from datetime import datetime
 EXCEL_PATH = "Inversión sistema fotovoltaico.xlsx"
 EXCEL_SHEET = "Total"
 
-# Cambiamos esto a una variable de sesión
+# Configuración inicial (antes de usar st.secrets)
 if 'INVERSION_INICIAL' not in st.session_state:
-    st.session_state['INVERSION_INICIAL'] = 109000
-
+    try:
+        st.session_state.INVERSION_INICIAL = st.secrets.get("INVERSION_INICIAL", 109000)
+    except FileNotFoundError:
+        st.session_state.INVERSION_INICIAL = 109000  # Valor por defecto si no existe secrets.toml
+        st.warning("⚠️ Archivo secrets.toml no encontrado. Usando valor por defecto.")
+    
 LOGO_PATH = "logo_solar.png"
 
 # ============================
@@ -209,19 +213,14 @@ with st.sidebar:
     
     st.markdown("## Configuración de Meta")
     with st.expander("Actualizar Meta de Ahorro"):
-        nueva_meta = st.number_input(
-            "Meta de inversión a recuperar ($)", 
-            min_value=0.0, 
-            value=float(st.session_state['INVERSION_INICIAL']),
-            step=1000.0,
-            format="%.2f"
-        )
         
-        if st.button("Actualizar Meta"):
-            st.session_state['INVERSION_INICIAL'] = nueva_meta
+        nueva_meta = st.number_input("Nueva meta ($)", value=st.session_state.INVERSION_INICIAL)
+        if st.button("💾 Guardar Meta"):
+            st.session_state.INVERSION_INICIAL = nueva_meta
             st.success(f"Meta actualizada a ${nueva_meta:,.2f}")
-            
-        st.markdown("## Filtros")
+            # Sobrescribe secrets.toml (requiere reinicio para aplicar cambios permanentes)
+            with open(".streamlit/secrets.toml", "w") as f:
+                f.write(f"INVERSION_INICIAL = {nueva_meta}")                
     
     # ============================
     # Sidebar - Filtros
