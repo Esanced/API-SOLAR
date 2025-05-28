@@ -12,14 +12,24 @@ from datetime import datetime
 EXCEL_PATH = "Inversión sistema fotovoltaico.xlsx"
 EXCEL_SHEET = "Total"
 
-# Configuración inicial (antes de usar st.secrets)
+# ============================
+# Configurar la página principal
+# ============================
+st.set_page_config(
+    page_title="Monitoreo Solar",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Lee el valor del secreto o usa uno por defecto
 if 'INVERSION_INICIAL' not in st.session_state:
     try:
-        st.session_state.INVERSION_INICIAL = st.secrets.get("INVERSION_INICIAL", 109000)
-    except FileNotFoundError:
-        st.session_state.INVERSION_INICIAL = 109000  # Valor por defecto si no existe secrets.toml
-        st.warning("⚠️ Archivo secrets.toml no encontrado. Usando valor por defecto.")
-    
+        # Para GitHub Actions (secreto)
+        st.session_state.INVERSION_INICIAL = float(os.environ["INVERSION_INICIAL"])
+    except KeyError:
+        # Para desarrollo local (secrets.toml o valor por defecto)
+        st.session_state.INVERSION_INICIAL = st.secrets.get("INVERSION_INICIAL", 100000)
+
 LOGO_PATH = "logo_solar.png"
 
 # ============================
@@ -123,15 +133,6 @@ def extraer_numero(patron, texto, group=1):
         return 0.0
     except:
         return 0.0
-
-# ============================
-# Configurar la página principal
-# ============================
-st.set_page_config(
-    page_title="Monitoreo Solar",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # ============================
 # Sidebar - Logo y filtros
