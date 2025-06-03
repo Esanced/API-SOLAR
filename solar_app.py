@@ -262,35 +262,14 @@ with st.sidebar:
             )
             
             # Campos solares (siempre comienzan en 0)
-            nuevo_basico_solar = st.number_input(
-                "Básico Solar", 
+            Total_solar = st.number_input(
+                "Total Solar", 
                 min_value=0.0, 
                 format="%.2f", 
                 value=0.0,
-                key="basico_solar_input"
+                key="Total_solar_input"
             )
-            nuevo_intermedio1_solar = st.number_input(
-                "Intermedio 1 Solar", 
-                min_value=0.0, 
-                format="%.2f", 
-                value=0.0,
-                key="intermedio1_solar_input"
-            )
-            nuevo_intermedio2_solar = st.number_input(
-                "Intermedio 2 Solar", 
-                min_value=0.0, 
-                format="%.2f", 
-                value=0.0,
-                key="intermedio2_solar_input"
-            )
-            nuevo_excedente_solar = st.number_input(
-                "Excedente Solar", 
-                min_value=0.0, 
-                format="%.2f", 
-                value=0.0,
-                key="excedente_solar_input"
-            )
-            
+                        
             # Campos CFE con valores predefinidos del PDF o 0
             nuevo_basico_cfe = st.number_input(
                 "Básico CFE", 
@@ -358,10 +337,7 @@ with st.sidebar:
     if submit_button:
         try:
             # Convertir todos los valores a float explícitamente
-            nuevo_basico_solar = float(nuevo_basico_solar)
-            nuevo_intermedio1_solar = float(nuevo_intermedio1_solar)
-            nuevo_intermedio2_solar = float(nuevo_intermedio2_solar)
-            nuevo_excedente_solar = float(nuevo_excedente_solar)
+            Total_basico_solar = float(Total_solar)
             nuevo_basico_cfe = float(nuevo_basico_cfe)
             nuevo_intermedio1_cfe = float(nuevo_intermedio1_cfe)
             nuevo_intermedio2_cfe = float(nuevo_intermedio2_cfe)
@@ -378,16 +354,27 @@ with st.sidebar:
                 nuevo_num_periodo = 1
             
             # Datos de energia de paneles solares
-            subtotal_solar = (
-                (nuevo_basico_solar) + (nuevo_intermedio1_solar) + 
-                (nuevo_intermedio2_solar) + (nuevo_excedente_solar)
-            )
+            
+            if Total_solar <= 150:
+                nuevo_basico_solar = Total_solar * precio_basico
+                subtotal_solar = nuevo_basico_solar
+            elif Total_solar <= 350:
+                nuevo_basico_solar = 150 * precio_basico
+                nuevo_intermedio1_solar = (Total_solar - 150) * precio_intermedio
+                subtotal_solar = nuevo_intermedio1_solar + nuevo_basico_solar
+            else:  # MWh_devueltos > 350
+                nuevo_basico_solar = 150 * precio_basico
+                nuevo_intermedio1_solar = 200 * precio_intermedio
+                nuevo_excedente_solar = (Total_solar - 350) * precio_excedente
+                nuevo_intermedio2_solar = 0
+                # Se corrigió el cálculo final para sumar la variable correcta.
+                subtotal_solar = nuevo_basico_solar + nuevo_intermedio1_solar + nuevo_intermedio2_solar + nuevo_excedente_solar
             
             iva_solar = subtotal_solar * 0.16
             total_recibo_solar = subtotal_solar + iva_solar
             
-            
             # Datos de energia de recibo de CFE
+            
             subtotal_cfe = (
                 (nuevo_basico_cfe*precio_basico) + (nuevo_intermedio1_cfe*precio_intermedio) + 
                 (nuevo_intermedio2_cfe) + (nuevo_excedente_cfe*precio_excedente)
@@ -412,21 +399,21 @@ with st.sidebar:
             nuevo_registro = {
                 periodo_col: nuevo_periodo,
                 "No. Periodo": nuevo_num_periodo,
-                "Básico Solar": nuevo_basico_solar,
-                "Intermedio 1 Solar": nuevo_intermedio1_solar,
-                "Intermedio 2 Solar": nuevo_intermedio2_solar,
-                "Excedente Solar": nuevo_excedente_solar,
-                "Básico CFE": nuevo_basico_cfe*precio_basico,
-                "Intermedio 1 CFE": nuevo_intermedio1_cfe*precio_intermedio,
-                "Intermedio 2 CFE": nuevo_intermedio2_cfe,
-                "Excedente CFE": nuevo_excedente_cfe*precio_excedente,
+                "Básico Solar": nuevo_basico_cfe*precio_basico,
+                "Intermedio 1 Solar": nuevo_intermedio1_cfe*precio_intermedio,
+                "Intermedio 2 Solar": nuevo_intermedio2_cfe,
+                "Excedente Solar": nuevo_excedente_cfe*precio_excedente,
+                "Básico CFE": nuevo_basico_solar,
+                "Intermedio 1 CFE": nuevo_intermedio1_solar,
+                "Intermedio 2 CFE": nuevo_intermedio2_solar,
+                "Excedente CFE": nuevo_excedente_solar,
                 "Mwh Devueltos": MWh_devueltos,
                 "Subtotal Solar": subtotal_solar,
-                "IVA Solar": iva_solar,
-                "Total de recibo Solar": total_recibo_solar,
+                "IVA Solar": iva_cfe,
+                "Total de recibo Solar": total_cfe,
                 "Subtotal CFE": subtotal_cfe,
-                "IVA CFE": iva_cfe,
-                "Subtotal CFE.1": total_cfe, 
+                "IVA CFE": iva_solar,
+                "Subtotal CFE.1": total_recibo_solar, 
                 "Ahorro Total": ahorro_total
             }
             
